@@ -19,8 +19,8 @@ public class WitchAI : MonoBehaviour
 
     [Header("Player Detection")]
     public Transform player;
-    public float detectionRange = 10f;
-    public float escapeDistance = 15f;
+    public float detectionRange = 3f;
+    public float escapeDistance = 3f;
     [Header("Movement")]
     public float chaseSpeed = 2f;
     public float rageSpeed = 4f;
@@ -36,12 +36,12 @@ public class WitchAI : MonoBehaviour
     public float maxAgitation = 100f;
 
     [Header("State Thresholds")]
-    public float agitatedThreshold = 30f;
-    public float rageThreshold = 70f;
+    public float agitatedThreshold = 15f;
+    public float rageThreshold = 60f;
 
     [Header("Agitation Changes")]
-    public float agitationIncrease = 10f;
-    public float agitationDecrease = 5f;
+    public float agitationIncrease = 15f;
+    public float agitationDecrease = 20f;
     public float walkingNoise = 5f;
     public float runningNoise = 15f;
     public float jumpingNoise = 30f;
@@ -67,13 +67,13 @@ public class WitchAI : MonoBehaviour
 
     void Start()
     {
-        if (player != null)
+        if (player == null)
         {
-            float distance = Vector3.Distance(transform.position, player.position);
+            GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
 
-            if (distance <= screamRange)
+            if (playerObject != null)
             {
-                hasScreamed = true;
+                player = playerObject.transform;
             }
         }
     }
@@ -89,7 +89,6 @@ public class WitchAI : MonoBehaviour
             return;
 
         DetectPlayer();
-        CheckScream();
         UpdateState();
         MoveTowardsPlayer();
         AttackPlayer();
@@ -112,6 +111,7 @@ public class WitchAI : MonoBehaviour
         else if (distance <= detectionRange)
         {
             // Player is nearby.
+            agitation = Mathf.Max(agitation, agitatedThreshold);
             agitation += agitationIncrease * Time.deltaTime;
         }
         else
@@ -144,6 +144,18 @@ public class WitchAI : MonoBehaviour
         {
             currentState = newState;
             Debug.Log("Witch State: " + currentState);
+
+            if (currentState == WitchState.Agitated)
+            {
+                // Witch screams and alerts nearby zombies.
+                if (witchAudioSource != null && screamClip != null)
+                {
+                    witchAudioSource.PlayOneShot(screamClip);
+                }
+
+                SoundManager.MakeSound(transform.position, screamRange);
+                Debug.Log("Witch scream alerted nearby zombies!");
+            }
         }
     }
 
