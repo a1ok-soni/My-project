@@ -30,6 +30,8 @@ public class WitchAI : MonoBehaviour
     public float attackCooldown = 2f;
 
     private float attackTimer = 0f;
+    private float agitationTimer = 0f;
+    public float timeBeforeRage = 4f;
 
     [Header("Agitation")]
     public float agitation = 0f;
@@ -123,21 +125,28 @@ public class WitchAI : MonoBehaviour
         agitation = Mathf.Clamp(agitation, 0f, maxAgitation);
     }
 
+
+
+
     void UpdateState()
     {
+        float distance = Vector3.Distance(transform.position, player.position);
+
         WitchState newState;
 
-        if (agitation >= rageThreshold)
+        if (distance > 4f)
         {
-            newState = WitchState.Rage;
-        }
-        else if (agitation >= agitatedThreshold)
-        {
-            newState = WitchState.Agitated;
+            agitationTimer = 0f;
+            newState = WitchState.Calm;
         }
         else
         {
-            newState = WitchState.Calm;
+            agitationTimer += Time.deltaTime;
+
+            if (agitationTimer >= timeBeforeRage)
+                newState = WitchState.Rage;
+            else
+                newState = WitchState.Agitated;
         }
 
         if (newState != currentState)
@@ -147,17 +156,23 @@ public class WitchAI : MonoBehaviour
 
             if (currentState == WitchState.Agitated)
             {
-                // Witch screams and alerts nearby zombies.
                 if (witchAudioSource != null && screamClip != null)
-                {
                     witchAudioSource.PlayOneShot(screamClip);
-                }
 
                 SoundManager.MakeSound(transform.position, screamRange);
-                Debug.Log("Witch scream alerted nearby zombies!");
+
+                Movement playerMovement = player.GetComponent<Movement>();
+
+                if (playerMovement != null)
+                    playerMovement.ActivateSpeedBoost();
+
+                Debug.Log("Witch is warning the player!");
             }
         }
     }
+
+
+
 
     void UpdateAppearance()
     {
