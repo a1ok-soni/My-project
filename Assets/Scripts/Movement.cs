@@ -13,6 +13,13 @@ public class Movement : MonoBehaviour
     [Header("Movement")]
     public CharacterController controller;
     public float playerSpeed = 5f;
+
+    [Header("Witch Escape Boost")]
+    public float boostedSpeed = 9f;
+    public float boostDuration = 5f;
+
+    private float boostTimer = 0f;
+    private bool isSpeedBoosted = false;
     public float slowWalkSpeed = 2f;
     public float runSpeed = 8f;
     public float gravity = -9.81f;
@@ -33,6 +40,9 @@ public class Movement : MonoBehaviour
     public AudioSource footstepAudioSource;
     public AudioClip[] footstepClips;
 
+    [Header("Jump Sound")]
+    public AudioClip jumpClip;
+
     public float walkStepInterval = 0.5f;
     public float runStepInterval = 0.3f;
 
@@ -42,6 +52,8 @@ public class Movement : MonoBehaviour
     [Header("AI Hearing Settings")]
     public float walkNoiseRadius = 7f;
     public float runNoiseRadius = 13f;
+    [Header("Jump Sound")]
+    public float jumpNoiseRadius = 10f;
 
     public bool hasKey = false;
 
@@ -101,6 +113,17 @@ public class Movement : MonoBehaviour
 
     private void Update()
     {
+        if (isSpeedBoosted)
+        {
+            boostTimer -= Time.deltaTime;
+
+            if (boostTimer <= 0f)
+            {
+                isSpeedBoosted = false;
+                boostTimer = 0f;
+                Debug.Log("Witch escape speed boost ended.");
+            }
+        }
         // STUN CHECK
         if (isStunned)
         {
@@ -179,6 +202,12 @@ public class Movement : MonoBehaviour
         else if (isRunning)
             currentSpeed = runSpeed;
 
+        // Witch escape boost overrides normal movement speeds
+        if (isSpeedBoosted)
+        {
+            currentSpeed = boostedSpeed;
+        }
+
         Vector3 previousPosition = transform.position;
 
         controller.Move(
@@ -237,6 +266,14 @@ public class Movement : MonoBehaviour
         {
             footstepTimer = walkStepInterval;
         }
+    }
+
+    public void ActivateSpeedBoost()
+    {
+        isSpeedBoosted = true;
+        boostTimer = boostDuration;
+
+        Debug.Log("Witch screamed! Player speed boosted!");
     }
 
     private void PlayFootstep()

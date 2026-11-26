@@ -19,8 +19,8 @@ public class WitchAI : MonoBehaviour
 
     [Header("Player Detection")]
     public Transform player;
-    public float detectionRange = 10f;
-    public float escapeDistance = 15f;
+    public float detectionRange = 3f;
+    public float escapeDistance = 3f;
     [Header("Movement")]
     public float chaseSpeed = 2f;
     public float rageSpeed = 4f;
@@ -30,18 +30,20 @@ public class WitchAI : MonoBehaviour
     public float attackCooldown = 2f;
 
     private float attackTimer = 0f;
+    private float agitationTimer = 0f;
+    public float timeBeforeRage = 4f;
 
     [Header("Agitation")]
     public float agitation = 0f;
     public float maxAgitation = 100f;
 
     [Header("State Thresholds")]
-    public float agitatedThreshold = 30f;
-    public float rageThreshold = 70f;
+    public float agitatedThreshold = 15f;
+    public float rageThreshold = 60f;
 
     [Header("Agitation Changes")]
-    public float agitationIncrease = 10f;
-    public float agitationDecrease = 5f;
+    public float agitationIncrease = 15f;
+    public float agitationDecrease = 20f;
     public float walkingNoise = 5f;
     public float runningNoise = 15f;
     public float jumpingNoise = 30f;
@@ -67,13 +69,13 @@ public class WitchAI : MonoBehaviour
 
     void Start()
     {
-        if (player != null)
+        if (player == null)
         {
-            float distance = Vector3.Distance(transform.position, player.position);
+            GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
 
-            if (distance <= screamRange)
+            if (playerObject != null)
             {
-                hasScreamed = true;
+                player = playerObject.transform;
             }
         }
     }
@@ -89,7 +91,6 @@ public class WitchAI : MonoBehaviour
             return;
 
         DetectPlayer();
-        CheckScream();
         UpdateState();
         MoveTowardsPlayer();
         AttackPlayer();
@@ -112,6 +113,7 @@ public class WitchAI : MonoBehaviour
         else if (distance <= detectionRange)
         {
             // Player is nearby.
+            agitation = Mathf.Max(agitation, agitatedThreshold);
             agitation += agitationIncrease * Time.deltaTime;
         }
         else
@@ -123,29 +125,54 @@ public class WitchAI : MonoBehaviour
         agitation = Mathf.Clamp(agitation, 0f, maxAgitation);
     }
 
+
+
+
     void UpdateState()
     {
+        float distance = Vector3.Distance(transform.position, player.position);
+
         WitchState newState;
 
-        if (agitation >= rageThreshold)
+        if (distance > 4f)
         {
-            newState = WitchState.Rage;
-        }
-        else if (agitation >= agitatedThreshold)
-        {
-            newState = WitchState.Agitated;
+            agitationTimer = 0f;
+            newState = WitchState.Calm;
         }
         else
         {
-            newState = WitchState.Calm;
+            agitationTimer += Time.deltaTime;
+
+            if (agitationTimer >= timeBeforeRage)
+                newState = WitchState.Rage;
+            else
+                newState = WitchState.Agitated;
         }
 
         if (newState != currentState)
         {
             currentState = newState;
             Debug.Log("Witch State: " + currentState);
+
+            if (currentState == WitchState.Agitated)
+            {
+                if (witchAudioSource != null && screamClip != null)
+                    witchAudioSource.PlayOneShot(screamClip);
+
+                SoundManager.MakeSound(transform.position, screamRange);
+
+                Movement playerMovement = player.GetComponent<Movement>();
+
+                if (playerMovement != null)
+                    playerMovement.ActivateSpeedBoost();
+
+                Debug.Log("Witch is warning the player!");
+            }
         }
     }
+
+
+
 
     void UpdateAppearance()
     {
